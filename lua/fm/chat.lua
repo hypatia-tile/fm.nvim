@@ -10,6 +10,9 @@ local M = {
   messages = {},
   ---@type integer|nil
   job_id = nil,
+  ---Token of the request in flight. Callbacks from any other request are stale.
+  ---@type table|nil
+  current = nil,
   ---@type string|nil
   transcript_path = nil,
   ---@type boolean
@@ -50,6 +53,8 @@ function M.is_busy()
 end
 
 function M.stop()
+  -- Drop the token first so the killed job's exit (code 143) is ignored.
+  M.current = nil
   if M.job_id then
     pcall(vim.fn.jobstop, M.job_id)
     M.job_id = nil
@@ -117,6 +122,8 @@ function M.ask(prompt, opts)
     resume = transcript
   end
 
+  local req = {}
+  M.current = req
   M.busy = true
   if opts.on_start then
     opts.on_start(user, assistant)
@@ -132,6 +139,9 @@ function M.ask(prompt, opts)
   }, {
     on_stdout = function(chunk)
       vim.schedule(function()
+        if M.current ~= req then
+          return
+        end
         append_content(assistant, chunk)
         if opts.on_delta then
           opts.on_delta(assistant, chunk)
@@ -139,10 +149,18 @@ function M.ask(prompt, opts)
       end)
     end,
     on_stderr = function(chunk)
+      if M.current ~= req then
+        return
+      end
       table.insert(stderr, chunk)
     end,
     on_exit = function(code, _)
       vim.schedule(function()
+        if M.current ~= req then
+          -- Stopped, cleared, or superseded: leave the newer state alone.
+          return
+        end
+        M.current = nil
         M.job_id = nil
         M.busy = false
         if code ~= 0 then
@@ -168,6 +186,7 @@ function M.ask(prompt, opts)
   })
 
   if not job_ok then
+    M.current = nil
     M.busy = false
     assistant.role = "error"
     assistant.content = tostring(job_or_err)
