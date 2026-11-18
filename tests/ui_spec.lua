@@ -20,6 +20,7 @@ vim.fn.system({ "chmod", "+x", fake })
 require("fm").setup({
   cmd = fake,
   instructions = "test",
+  transcript_dir = vim.fn.tempname(),
   keymaps = {
     toggle = false,
     ask_selection = false,
@@ -38,6 +39,11 @@ local chat = require("fm.chat")
 
 fm.open()
 assert_true(ui.is_open(), "hover window should open")
+
+-- <Esc> leaves Insert mode in the input window; it closes only from Normal mode.
+assert_true(vim.api.nvim_get_current_buf() == ui.input_buf, "input window is focused")
+assert_true(vim.fn.maparg("<Esc>", "i", false, true).buffer ~= 1, "no Insert-mode <Esc> map in the input buffer")
+assert_true(vim.fn.maparg("<Esc>", "n", false, true).buffer == 1, "Normal-mode <Esc> closes")
 
 local done = false
 chat.ask("ping", {

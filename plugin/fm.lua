@@ -43,7 +43,10 @@ vim.api.nvim_create_user_command(
 vim.api.nvim_create_user_command(
   "FmAskSelection",
   with_fm(function(fm, opts)
-    fm.ask_selection(opts.args, { line1 = opts.line1, line2 = opts.line2 })
+    -- Without a range, line1/line2 are the cursor line; pass nil so the last
+    -- '< '> selection is used instead.
+    local range = opts.range > 0 and { line1 = opts.line1, line2 = opts.line2 } or nil
+    fm.ask_selection(opts.args, range)
   end),
   {
     nargs = "*",

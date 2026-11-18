@@ -63,7 +63,7 @@ Inside the hover window:
 | --- | --- |
 | `<CR>` | Send the prompt |
 | `<C-Enter>` / `<S-CR>` | Insert a newline |
-| `q` / `<Esc>` | Close |
+| `q` / `<Esc>` (Normal mode) | Close |
 | `<C-l>` | Clear conversation |
 | `<C-c>` | Stop generation |
 

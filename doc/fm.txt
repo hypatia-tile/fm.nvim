@@ -45,10 +45,9 @@ Defaults (override via |fm-setup|):
   <leader>fm     Toggle hover chat (normal/visual)
   <leader>fa     Ask about visual selection
   <CR>           Send prompt (in input window)
-  q              Close
+  q / <Esc>      Close (Normal mode; <Esc> in Insert mode leaves Insert mode)
   <C-l>          Clear conversation
   <C-c>          Stop generation
-  <Esc>          Close from insert mode in the input window
   <C-Enter>      Insert a newline in the input window
 
 ==============================================================================

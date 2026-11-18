@@ -8,29 +8,26 @@ local function notify(msg, level)
   vim.notify(msg, level or vim.log.levels.INFO, { title = "fm.nvim" })
 end
 
+local ask
+
+---Called when a prompt is sent from the chat window's input.
+---@param text string
+local function on_send(text)
+  ask(text, {})
+end
+
 ---@param prompt string
----@param opts { text?: string, hover?: boolean }|nil
-local function ask(prompt, opts)
+---@param opts { text?: string }|nil
+ask = function(prompt, opts)
   opts = opts or {}
 
   local started = chat.ask(prompt, {
     text = opts.text,
     on_start = function()
-      if opts.hover then
-        -- Render into the chat hover window for streaming updates.
-        if not ui.is_open() then
-          ui.open(function(text)
-            ask(text, {})
-          end)
-        else
-          ui.render()
-        end
-      elseif ui.is_open() then
+      if ui.is_open() then
         ui.render()
       else
-        ui.open(function(text)
-          ask(text, {})
-        end)
+        ui.open(on_send)
       end
     end,
     on_delta = function()
@@ -73,15 +70,11 @@ function M.setup(opts)
 end
 
 function M.toggle()
-  ui.toggle(function(text)
-    ask(text, {})
-  end)
+  ui.toggle(on_send)
 end
 
 function M.open()
-  ui.open(function(text)
-    ask(text, {})
-  end)
+  ui.open(on_send)
 end
 
 function M.close()
@@ -115,13 +108,14 @@ function M.ask_selection(prompt, range)
   local text
 
   if mode == "v" or mode == "V" or mode == "\22" then
-    local ok, selection = pcall(function()
-      return vim.fn.getregion(vim.fn.getpos("v"), vim.fn.getpos("."), { type = mode })
-    end)
-    if ok and selection and #selection > 0 then
-      text = table.concat(selection, "\n")
+    local from, to = vim.fn.getpos("v"), vim.fn.getpos(".")
+    if vim.fn.exists("*getregion") == 1 then
+      text = table.concat(vim.fn.getregion(from, to, { type = mode }), "\n")
     else
-      text = lines_text(0, vim.fn.getpos("'<")[2], vim.fn.getpos("'>")[2])
+      -- Neovim 0.9 has no getregion(). The '< and '> marks still hold the
+      -- previous selection while in Visual mode, so use the live ends of the
+      -- current one, whole lines.
+      text = lines_text(0, math.min(from[2], to[2]), math.max(from[2], to[2]))
     end
     vim.api.nvim_feedkeys(vim.api.nvim_replace_termcodes("<Esc>", true, false, true), "n", false)
   elseif range and range.line1 and range.line2 and range.line2 >= range.line1 then
@@ -162,12 +156,6 @@ function M.stop()
   if ui.is_open() then
     ui.render()
   end
-end
-
----Quick one-shot prompt; streams into the hover chat window.
----@param prompt string
-function M.respond(prompt)
-  ask(prompt, {})
 end
 
 return M

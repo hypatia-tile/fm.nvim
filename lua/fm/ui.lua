@@ -47,19 +47,10 @@ local function layout()
   local input_height = math.max(1, cfg.input_height or 3)
   local chat_height = math.max(3, height - input_height - 1)
 
-  local row, col
-  if cfg.relative == "cursor" then
-    -- Hover-style: anchor near the cursor.
-    local win_row = vim.fn.winline()
-    local win_col = vim.fn.wincol()
-    row = math.min(win_row, math.max(0, vim.o.lines - height - 2))
-    col = math.min(math.max(0, win_col - 1), math.max(0, vim.o.columns - width))
-  else
-    row = math.floor((vim.o.lines - height) / 2) - 1
-    col = math.floor((vim.o.columns - width) / 2)
-    row = math.max(0, row)
-    col = math.max(0, col)
-  end
+  -- Centred in the editor. With relative = "cursor", M.open() anchors the
+  -- windows at the cursor and does not use row/col.
+  local row = math.max(0, math.floor((vim.o.lines - height) / 2) - 1)
+  local col = math.max(0, math.floor((vim.o.columns - width) / 2))
 
   return {
     row = row,
@@ -107,13 +98,6 @@ function M.close()
   M.win, M.buf, M.input_win, M.input_buf = nil, nil, nil, nil
 end
 
----@param lines string[]
----@return string[]
-local function wrap_soft(lines)
-  -- Keep raw lines; Neovim wraps with wrap=true.
-  return lines
-end
-
 function M.render()
   if not M.is_open() then
     return
@@ -159,7 +143,6 @@ function M.render()
     end
   end
 
-  lines = wrap_soft(lines)
   vim.bo[M.buf].modifiable = true
   vim.api.nvim_buf_set_lines(M.buf, 0, -1, false, lines)
   vim.bo[M.buf].modifiable = false
@@ -199,8 +182,11 @@ local function bind_keys(on_send)
   map_buf(M.input_buf, "n", keys.close, function()
     M.close()
   end, "Close fm window")
-  map_buf(M.input_buf, "i", "<Esc>", function()
-    vim.cmd("stopinsert")
+  -- <Esc> in Insert mode leaves Insert mode as usual; in Normal mode it closes.
+  map_buf(M.buf, "n", "<Esc>", function()
+    M.close()
+  end, "Close fm window")
+  map_buf(M.input_buf, "n", "<Esc>", function()
     M.close()
   end, "Close fm window")
 
@@ -341,54 +327,6 @@ function M.toggle(on_send)
   else
     M.open(on_send)
   end
-end
-
----One-shot hover float near the cursor (LSP-style).
----@param title string
----@param body string
-function M.hover(title, body)
-  hl_setup()
-  local width = math.min(80, math.max(40, math.floor(vim.o.columns * 0.5)))
-  local lines = vim.split(body, "\n", { plain = true })
-  if #lines == 0 then
-    lines = { "" }
-  end
-  local height = math.min(20, math.max(3, #lines))
-
-  local buf = vim.api.nvim_create_buf(false, true)
-  vim.api.nvim_buf_set_lines(buf, 0, -1, false, lines)
-  vim.bo[buf].modifiable = false
-  vim.bo[buf].bufhidden = "wipe"
-  vim.bo[buf].filetype = "markdown"
-
-  local win = vim.api.nvim_open_win(buf, false, {
-    relative = "cursor",
-    row = 1,
-    col = 0,
-    width = width,
-    height = height,
-    style = "minimal",
-    border = config.get().window.border,
-    title = " " .. title .. " ",
-    title_pos = "center",
-    zindex = 60,
-    focusable = true,
-  })
-  vim.wo[win].wrap = true
-  vim.wo[win].linebreak = true
-
-  local group = vim.api.nvim_create_augroup("fm.nvim.hover", { clear = true })
-  vim.api.nvim_create_autocmd({ "CursorMoved", "InsertEnter", "BufLeave" }, {
-    group = group,
-    callback = function()
-      if vim.api.nvim_win_is_valid(win) then
-        pcall(vim.api.nvim_win_close, win, true)
-      end
-      pcall(vim.api.nvim_del_augroup_by_id, group)
-    end,
-  })
-
-  return win, buf
 end
 
 return M

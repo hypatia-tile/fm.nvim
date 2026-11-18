@@ -27,11 +27,28 @@ local function ensure_transcript_dir()
   return dir
 end
 
+-- The transcript is named after this Neovim's PID, so no later session can
+-- resume it. Delete it (and stop any running job) when Neovim exits.
+local cleanup_registered = false
+local function register_cleanup()
+  if cleanup_registered then
+    return
+  end
+  cleanup_registered = true
+  vim.api.nvim_create_autocmd("VimLeavePre", {
+    group = vim.api.nvim_create_augroup("fm.nvim.cleanup", { clear = true }),
+    callback = function()
+      M.clear()
+    end,
+  })
+end
+
 ---@return string
 function M.transcript_file()
   if M.transcript_path then
     return M.transcript_path
   end
+  register_cleanup()
   local dir = ensure_transcript_dir()
   M.transcript_path = dir .. "/session-" .. tostring(vim.fn.getpid()) .. ".json"
   return M.transcript_path
@@ -40,7 +57,7 @@ end
 function M.clear()
   M.stop()
   M.messages = {}
-  local path = M.transcript_path or M.transcript_file()
+  local path = M.transcript_path
   if path and vim.fn.filereadable(path) == 1 then
     pcall(vim.fn.delete, path)
   end
@@ -164,7 +181,8 @@ function M.ask(prompt, opts)
         M.job_id = nil
         M.busy = false
         if code ~= 0 then
-          local err = vim.trim(table.concat(stderr, ""))
+          -- fm colours its messages; drop the ANSI escape sequences.
+          local err = vim.trim((table.concat(stderr, ""):gsub("\27%[[%d;]*m", "")))
           if timed_out then
             err = ("fm timed out after %d ms"):format(config.get().timeout)
           elseif err == "" then

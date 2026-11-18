@@ -30,8 +30,11 @@ function M.build_respond_args(prompt, opts)
     vim.list_extend(args, { "--model", cfg.model })
   end
 
+  -- fm rejects --instructions with --resume: the saved transcript already
+  -- holds the first turn's instructions.
+  local resuming = opts.resume and opts.resume ~= ""
   local instructions = opts.instructions or cfg.instructions
-  if instructions and instructions ~= "" then
+  if not resuming and instructions and instructions ~= "" then
     vim.list_extend(args, { "--instructions", instructions })
   end
 

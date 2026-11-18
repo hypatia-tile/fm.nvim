@@ -38,8 +38,6 @@ assert_eq(args[1], "fm")
 assert_eq(args[2], "respond")
 assert_has(args, "--model")
 assert_has(args, "system")
-assert_has(args, "--instructions")
-assert_has(args, "be brief")
 assert_has(args, "--text")
 assert_has(args, "context")
 assert_has(args, "--resume")
@@ -51,6 +49,13 @@ assert_has(args, "--greedy")
 assert_has(args, "--use-case")
 assert_has(args, "general")
 assert_eq(args[#args - 1], "--", "end of options before the prompt")
+for _, a in ipairs(args) do
+  assert_eq(a ~= "--instructions", true, "no --instructions when resuming")
+end
+
+local first = cli.build_respond_args("first", { save_transcript = "/tmp/b.json" })
+assert_has(first, "--instructions")
+assert_has(first, "be brief")
 assert_eq(args[#args], "hello")
 
 require("fm").setup({ stream = false, instructions = nil, greedy = false, use_case = nil })
