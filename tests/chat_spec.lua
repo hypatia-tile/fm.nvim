@@ -82,7 +82,9 @@ require("fm.config").options.cmd = slow
 require("fm.config").options.timeout = 200
 
 local timeout_err, timeout_code
-local started_at = vim.uv.now()
+-- Neovim 0.9 exposes libuv as vim.loop; 0.10+ also provides vim.uv.
+local uv = vim.uv or vim.loop
+local started_at = uv.now()
 assert_true(chat.ask("six", {
   on_error = function(err)
     timeout_err = err
@@ -95,7 +97,7 @@ vim.wait(3000, function()
   return timeout_code ~= nil
 end, 20)
 assert_true(timeout_code ~= nil and timeout_code ~= 0, "slow job is killed")
-assert_true(vim.uv.now() - started_at < 2000, "killed near the timeout")
+assert_true(uv.now() - started_at < 2000, "killed near the timeout")
 assert_true(timeout_err and timeout_err:find("timed out after 200 ms"), "timeout reported: " .. tostring(timeout_err))
 assert_true(not chat.is_busy(), "not busy after timeout")
 
