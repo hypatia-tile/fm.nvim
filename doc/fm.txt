@@ -1,0 +1,99 @@
+*fm.txt*  Talk to Apple Foundation Models (`fm`) from Neovim
+
+Author:  shinokun
+License: MIT
+
+==============================================================================
+INTRODUCTION                                                        *fm.nvim*
+
+fm.nvim opens a hover-style floating window so you can chat with Apple's
+on-device Foundation Models CLI (`fm`) without leaving Neovim.
+
+Requires:
+  • Neovim 0.9+
+  • macOS 27+ with Apple Intelligence enabled
+  • `fm` available on PATH (`/usr/bin/fm`)
+  • License accepted: `sudo fm license`
+
+==============================================================================
+COMMANDS                                                       *fm-commands*
+
+:Fm [prompt]                                                          *:Fm*
+    Toggle the hover chat window. With a prompt, send it immediately.
+
+:FmAsk {prompt}                                                    *:FmAsk*
+    Ask `{prompt}` and stream the reply into the hover window.
+
+:FmAskSelection [instruction]                             *:FmAskSelection*
+    Send the visual selection (or last `'<`/`'>` range) as `--text` context
+    with an optional instruction. Default instruction explains/improves code.
+
+:FmClear                                                        *:FmClear*
+    Clear conversation history and delete the session transcript.
+
+:FmStop                                                          *:FmStop*
+    Cancel the in-flight `fm respond` job.
+
+:FmClose                                                        *:FmClose*
+    Close the hover windows.
+
+==============================================================================
+KEYMAPS                                                         *fm-keymaps*
+
+Defaults (override via |fm-setup|):
+
+  <leader>fm     Toggle hover chat (normal/visual)
+  <leader>fa     Ask about visual selection
+  <CR>           Send prompt (in input window)
+  q              Close
+  <C-l>          Clear conversation
+  <C-c>          Stop generation
+  <Esc>          Close from insert mode in the input window
+  <C-Enter>      Insert a newline in the input window
+
+==============================================================================
+SETUP                                                             *fm-setup*
+
+>lua
+  require("fm").setup({
+    cmd = "fm",
+    model = "system", -- or "pcc"
+    instructions = "You are a helpful coding assistant inside Neovim.",
+    stream = true,
+    window = {
+      width = 0.6,
+      height = 0.5,
+      border = "rounded",
+      relative = "editor", -- or "cursor" for LSP-style hover placement
+      input_height = 3,
+    },
+    keymaps = {
+      toggle = "<leader>fm",
+      ask_selection = "<leader>fa",
+      send = "<CR>",
+      close = "q",
+      clear = "<C-l>",
+      stop = "<C-c>",
+    },
+  })
+<
+
+==============================================================================
+API                                                                   *fm-api*
+
+require("fm").setup({...})
+require("fm").toggle()
+require("fm").open()
+require("fm").close()
+require("fm").ask(prompt)
+require("fm").ask_selection(prompt?)
+require("fm").clear()
+require("fm").stop()
+
+==============================================================================
+HEALTH                                                           *fm-health*
+
+:checkhealth fm
+
+==============================================================================
+vim:tw=78:ts=8:ft=help:norl:
