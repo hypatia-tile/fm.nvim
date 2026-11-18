@@ -82,6 +82,7 @@ require("fm").setup({
   stream = true,
   greedy = false,
   transcript_dir = vim.fn.stdpath("cache") .. "/fm.nvim",
+  timeout = 0,            -- kill fm after this many ms (0 = no limit)
   window = {
     width = 0.6,          -- fraction of columns, or absolute
     height = 0.5,         -- fraction of lines, or absolute

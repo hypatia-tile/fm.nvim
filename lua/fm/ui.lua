@@ -165,13 +165,11 @@ function M.render()
   vim.bo[M.buf].modifiable = false
 
   vim.api.nvim_buf_clear_namespace(M.buf, NS, 0, -1)
+  -- Each mark is { first_row, last_row, hl_group }, rows 0-indexed and inclusive.
   for _, m in ipairs(marks) do
-    vim.api.nvim_buf_set_extmark(M.buf, NS, m[1], 0, {
-      end_row = m[2],
-      end_col = 0,
-      hl_group = m[3],
-      hl_eol = true,
-    })
+    for row = m[1], m[2] do
+      vim.api.nvim_buf_set_extmark(M.buf, NS, row, 0, { line_hl_group = m[3] })
+    end
   end
 
   -- Keep the latest reply visible.

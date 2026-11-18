@@ -74,5 +74,52 @@ chat.clear()
 vim.wait(300)
 assert_true(#chat.messages == 0, "cleared conversation stays empty: " .. vim.inspect(chat.messages))
 
+-- 4. timeout kills a slow job and reports it.
+local slow = vim.fn.tempname()
+vim.fn.writefile({ "#!/bin/sh", "sleep 5", "exit 0" }, slow)
+vim.fn.system({ "chmod", "+x", slow })
+require("fm.config").options.cmd = slow
+require("fm.config").options.timeout = 200
+
+local timeout_err, timeout_code
+local started_at = vim.uv.now()
+assert_true(chat.ask("six", {
+  on_error = function(err)
+    timeout_err = err
+  end,
+  on_done = function(_, code)
+    timeout_code = code
+  end,
+}), "slow ask starts")
+vim.wait(3000, function()
+  return timeout_code ~= nil
+end, 20)
+assert_true(timeout_code ~= nil and timeout_code ~= 0, "slow job is killed")
+assert_true(vim.uv.now() - started_at < 2000, "killed near the timeout")
+assert_true(timeout_err and timeout_err:find("timed out after 200 ms"), "timeout reported: " .. tostring(timeout_err))
+assert_true(not chat.is_busy(), "not busy after timeout")
+
+-- 5. stdin is not left open: a fake fm that reads stdin must not hang.
+chat.clear()
+local reader = vim.fn.tempname()
+vim.fn.writefile({ "#!/bin/sh", "cat", "printf 'read-done'", "exit 0" }, reader)
+vim.fn.system({ "chmod", "+x", reader })
+require("fm.config").options.cmd = reader
+require("fm.config").options.timeout = 0
+
+local reader_code
+assert_true(chat.ask("seven", {
+  on_done = function(_, code)
+    reader_code = code
+  end,
+}), "reader ask starts")
+vim.wait(2000, function()
+  return reader_code ~= nil
+end, 20)
+if reader_code == nil then
+  chat.stop()
+end
+assert_true(reader_code == 0, "job reading stdin finishes")
+
 print("chat_spec: ok")
 vim.cmd("qa!")

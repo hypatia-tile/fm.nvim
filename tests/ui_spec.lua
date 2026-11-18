@@ -59,6 +59,27 @@ assert_true(done, "job should finish")
 assert_true(ui.is_open(), "window still open after reply")
 ui.render()
 
+-- Header lines carry their highlight group.
+local function line_hl(row)
+  local marks = vim.api.nvim_buf_get_extmarks(ui.buf, -1, { row, 0 }, { row, -1 }, { details = true })
+  for _, m in ipairs(marks) do
+    if m[4].line_hl_group then
+      return m[4].line_hl_group
+    end
+  end
+end
+local lines = vim.api.nvim_buf_get_lines(ui.buf, 0, -1, false)
+local seen = {}
+for i, line in ipairs(lines) do
+  if line == "── You ──" then
+    seen.user = line_hl(i - 1)
+  elseif line == "── fm ──" then
+    seen.assistant = line_hl(i - 1)
+  end
+end
+assert_true(seen.user == "FmUser", "user header highlighted: " .. vim.inspect(seen))
+assert_true(seen.assistant == "FmAssistant", "assistant header highlighted: " .. vim.inspect(seen))
+
 fm.clear()
 assert_true(#chat.messages == 0, "cleared")
 

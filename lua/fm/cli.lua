@@ -69,6 +69,8 @@ function M.build_respond_args(prompt, opts)
     vim.list_extend(args, { "--guardrails", cfg.guardrails })
   end
 
+  -- End of options, so a prompt starting with "-" is not read as a flag.
+  table.insert(args, "--")
   table.insert(args, prompt)
   return args
 end
@@ -76,7 +78,7 @@ end
 ---@class FmJobCallbacks
 ---@field on_stdout fun(chunk: string)|nil
 ---@field on_stderr fun(chunk: string)|nil
----@field on_exit fun(code: integer, signal: integer)|nil
+---@field on_exit fun(code: integer, signal: integer, timed_out: boolean)|nil
 
 ---@param args string[]
 ---@param callbacks FmJobCallbacks
@@ -84,9 +86,22 @@ end
 function M.start(args, callbacks)
   callbacks = callbacks or {}
   local cfg = config.get()
+  local uv = vim.uv or vim.loop
+  local timer = nil
+  local timed_out = false
+
+  local function stop_timer()
+    if timer then
+      timer:stop()
+      timer:close()
+      timer = nil
+    end
+  end
 
   ---@type table
   local opts = {
+    -- fm gets no input on stdin; a pipe that never closes could block it.
+    stdin = "null",
     stdout_buffered = false,
     stderr_buffered = false,
     on_stdout = function(_, data)
@@ -96,20 +111,30 @@ function M.start(args, callbacks)
       emit_chunks(data, callbacks.on_stderr)
     end,
     on_exit = function(_, code, signal)
+      stop_timer()
       if callbacks.on_exit then
-        callbacks.on_exit(code, signal)
+        callbacks.on_exit(code, signal, timed_out)
       end
     end,
   }
-
-  if cfg.timeout and cfg.timeout > 0 then
-    opts.timeout = cfg.timeout
-  end
 
   local job_id = vim.fn.jobstart(args, opts)
   if job_id <= 0 then
     error(("fm.nvim: failed to start job for %q"):format(table.concat(args, " ")))
   end
+
+  -- jobstart() has no timeout option, so kill the job from a timer.
+  if cfg.timeout and cfg.timeout > 0 then
+    timer = uv.new_timer()
+    timer:start(cfg.timeout, 0, vim.schedule_wrap(function()
+      if timer then
+        timed_out = true
+        stop_timer()
+        pcall(vim.fn.jobstop, job_id)
+      end
+    end))
+  end
+
   return job_id
 end
 

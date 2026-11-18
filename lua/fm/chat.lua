@@ -154,7 +154,7 @@ function M.ask(prompt, opts)
       end
       table.insert(stderr, chunk)
     end,
-    on_exit = function(code, _)
+    on_exit = function(code, _, timed_out)
       vim.schedule(function()
         if M.current ~= req then
           -- Stopped, cleared, or superseded: leave the newer state alone.
@@ -165,7 +165,9 @@ function M.ask(prompt, opts)
         M.busy = false
         if code ~= 0 then
           local err = vim.trim(table.concat(stderr, ""))
-          if err == "" then
+          if timed_out then
+            err = ("fm timed out after %d ms"):format(config.get().timeout)
+          elseif err == "" then
             err = ("fm exited with code %d"):format(code)
           end
           if assistant.content == "" then

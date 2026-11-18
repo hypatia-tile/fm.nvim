@@ -60,6 +60,7 @@ SETUP                                                             *fm-setup*
     model = "system", -- or "pcc"
     instructions = "You are a helpful coding assistant inside Neovim.",
     stream = true,
+    timeout = 0, -- kill fm after this many ms (0 = no limit)
     window = {
       width = 0.6,
       height = 0.5,
