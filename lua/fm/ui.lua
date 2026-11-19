@@ -48,6 +48,11 @@ local function float_width()
   return math.max(20, math.min(100, math.floor(vim.o.columns * 0.6)))
 end
 
+---@return boolean
+function M.prompt_is_open()
+  return valid_win(M.prompt_win)
+end
+
 function M.close_prompt()
   if valid_win(M.prompt_win) then
     vim.api.nvim_win_close(M.prompt_win, true)

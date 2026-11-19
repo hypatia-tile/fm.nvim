@@ -20,6 +20,10 @@ end
 ---@param opts FmConfig|nil
 function M.setup(opts)
   config.setup(opts)
+  local toggle = config.get().keymaps.toggle
+  if toggle then
+    vim.keymap.set("n", toggle, M.toggle, { desc = "Toggle fm prompt window", silent = true })
+  end
 end
 
 ---@param prompt string
@@ -73,6 +77,15 @@ end
 ---Open the prompt window; the prompt is sent with <CR>.
 function M.prompt()
   ui.open_prompt(M.ask)
+end
+
+---Open the prompt window, or close it if it is open.
+function M.toggle()
+  if ui.prompt_is_open() then
+    ui.close_prompt()
+  else
+    M.prompt()
+  end
 end
 
 return M

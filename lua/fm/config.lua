@@ -1,6 +1,7 @@
 ---@class FmConfig
 ---@field cmd string Path or name of the fm executable
 ---@field instructions string|nil Instructions passed with --instructions
+---@field keymaps { toggle: string|false } Global keymaps; false disables one
 
 local M = {}
 
@@ -8,6 +9,9 @@ local M = {}
 M.defaults = {
   cmd = "fm",
   instructions = nil,
+  keymaps = {
+    toggle = "<leader>tf",
+  },
 }
 
 ---@type FmConfig

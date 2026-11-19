@@ -18,6 +18,7 @@ With [lazy.nvim](https://github.com/folke/lazy.nvim):
 {
   "hypatia-tile/fm.nvim",
   cmd = "Fm",
+  keys = { { "<leader>tf", desc = "Toggle fm prompt window" } },
   opts = {},
 }
 ```
@@ -35,11 +36,7 @@ In the prompt window, `<CR>` sends the prompt. In Normal mode, `q` or `<Esc>` ca
 
 The answer window shows your prompt, then the answer. `q` or `<Esc>` closes it. Closing it while `fm` is still working cancels the request. A new prompt replaces one that is still running.
 
-No keymaps are set. To add one:
-
-```lua
-vim.keymap.set("n", "<leader>F", "<cmd>Fm<cr>", { desc = "Ask fm" })
-```
+`setup()` maps `<leader>tf` in Normal mode to toggle the prompt window. Change it with `keymaps.toggle`, or set it to `false` for no mapping.
 
 ## Configuration
 
@@ -47,6 +44,9 @@ vim.keymap.set("n", "<leader>F", "<cmd>Fm<cr>", { desc = "Ask fm" })
 require("fm").setup({
   cmd = "fm",          -- path or name of the fm executable
   instructions = nil,  -- passed to fm with --instructions
+  keymaps = {
+    toggle = "<leader>tf", -- false to disable
+  },
 })
 ```
 
